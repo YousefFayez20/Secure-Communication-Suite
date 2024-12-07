@@ -1,49 +1,58 @@
-from utils.keys import generate_aes_key, generate_iv, generate_rsa_keys
+from utils.auth import register_user, authenticate_user
+from utils.keys import generate_and_store_rsa_keys, load_rsa_keys, generate_aes_key, generate_iv
 from crypto.aes import AESHandler
-from crypto.rsaEnDe import RSAHandler
 from crypto.hash import compute_sha256, verify_hash
+from crypto.signing import sign_message, verify_signature
 
 def main():
-    # Step 1: Generate AES Key and IV
+    print("=== Secure Communication Suite ===")
+
+    # Step 1: User Registration or Login
+    choice = input("1. Register\n2. Login\nChoose an option: ")
+    username = input("Enter username: ")
+    password = input("Enter password: ")
+
+    if choice == "1":
+        register_user(username, password)
+        generate_and_store_rsa_keys(username)
+    elif choice == "2":
+        if not authenticate_user(username, password):
+            return
+        generate_and_store_rsa_keys(username)
+
+    # Load user keys
+    public_key, private_key = load_rsa_keys(username)
+
+    # Step 2: Message Preparation
+    message = input("Enter the message to encrypt: ")
+    print(f"\nOriginal Message: {message}")
+
+    # Step 3: Hash the message
+    message_hash = compute_sha256(message)
+    print(f"Message Hash (SHA-256): {message_hash}")
+
+    # Step 4: Sign the message
+    signature = sign_message(message, private_key)
+    print(f"Message Signature: {signature.hex()}")
+
+    # Step 5: Verify the signature
+    is_valid = verify_signature(message, signature, public_key)
+    print("Signature Verification:", "Passed" if is_valid else "Failed")
+
+    # Step 6: Encrypt the message using AES
     aes_key = generate_aes_key()
     iv = generate_iv()
-
-    # Step 2: Generate RSA Keys
-    public_key, private_key = generate_rsa_keys()
-    rsa_handler = RSAHandler(public_key, private_key)
-
-    # Step 3: Encrypt AES Key using RSA
-    rsa_encrypted_aes_key = rsa_handler.encrypt(aes_key)
-
-    # Step 4: Hash the plaintext message
-    message = "This is a secure message."
-    original_hash = compute_sha256(message)
-    print(f"Original SHA-256 Hash: {original_hash}")
-
-    # Step 5: Encrypt Message using AES
     aes_handler = AESHandler(aes_key, iv)
     encrypted_message = aes_handler.encrypt(message)
-    print(f"Encrypted Message: {encrypted_message.hex()}")
+    print(f"\nEncrypted Message: {encrypted_message.hex()}")
 
-    # Simulate transmission of encrypted message and hash
-    transmitted_data = {
-        "ciphertext": encrypted_message,
-        "hash": original_hash
-    }
-
-    # Step 6: Decrypt AES Key using RSA
-    rsa_decrypted_aes_key = rsa_handler.decrypt(rsa_encrypted_aes_key)
-
-    # Step 7: Decrypt Message using AES
-    decrypted_message = aes_handler.decrypt(transmitted_data["ciphertext"])
+    # Step 7: Decrypt the message
+    decrypted_message = aes_handler.decrypt(encrypted_message)
     print(f"Decrypted Message: {decrypted_message}")
 
-    # Step 8: Verify Hash
-    is_valid = verify_hash(decrypted_message, transmitted_data["hash"])
-    if is_valid:
-        print("Integrity Check Passed: Decrypted message matches the original hash.")
-    else:
-        print("Integrity Check Failed: Message may have been tampered with.")
+    # Verify message integrity
+    is_message_intact = verify_hash(decrypted_message, message_hash)
+    print("Message Integrity:", "Intact" if is_message_intact else "Compromised")
 
 if __name__ == "__main__":
     main()
