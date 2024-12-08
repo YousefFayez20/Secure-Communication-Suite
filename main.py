@@ -1,9 +1,8 @@
-from utils.auth import register_user, authenticate_user, generate_user_certificate
+from utils.auth import register_user, authenticate_user, generate_user_certificate, get_registered_users
 from utils.keys import generate_rsa_keys, generate_aes_key, generate_iv
 from crypto.aes import AESHandler
 from crypto.hash import compute_sha256, verify_hash
 from crypto.ca import create_ca
-from crypto.signing import sign_message, verify_signature
 from crypto.rsaEnDe import RSAHandler
 
 
@@ -11,6 +10,7 @@ def main():
     print("=== Secure Communication Suite ===")
     print("1. Register User")
     print("2. Login and Use Suite")
+    print("3. View Registered Users")
     choice = input("Choose an option: ").strip()
 
     if choice == "1":
@@ -69,6 +69,16 @@ def main():
         # Verify Integrity
         is_message_intact = verify_hash(decrypted_message, message_hash)
         print(f"Message Integrity: {'Intact' if is_message_intact else 'Compromised'}")
+
+    elif choice == "3":
+        # Display Registered Users
+        print("\nRegistered Users:")
+        users = get_registered_users()
+        if users:
+            for user in users:
+                print(f"- {user}")
+        else:
+            print("No users registered.")
 
     else:
         print("Invalid option. Exiting.")

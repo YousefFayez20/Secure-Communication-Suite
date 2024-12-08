@@ -21,16 +21,19 @@ class RSAHandler:
 
     def decrypt(self, data):
         """Decrypt data with RSA private key."""
-        plaintext = self.private_key.decrypt(
-            data,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
+        try:
+            plaintext = self.private_key.decrypt(
+                data,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
             )
-        )
-        return plaintext.decode()  # Decode back to string
-
+            return plaintext
+        except Exception as e:
+            print(f"Decryption failed: {e}")
+            return None
     def sign(self, message):
         """Sign a message using the private key."""
         signature = self.private_key.sign(

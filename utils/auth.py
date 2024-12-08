@@ -6,18 +6,26 @@ from cryptography.x509 import CertificateSigningRequestBuilder, CertificateBuild
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption
 import datetime
-
+AUTH_FILE = "data/auth.txt"
+USERS_FILE = "data/users.txt"
 def register_user(username, password):
-    """Register a new user by storing hashed password."""
+    """Register a new user by storing hashed password and username."""
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    with open("data/auth.txt", "a") as f:
-        f.write(f"{username},{hashed_password}\n")
-    print(f"User {username} registered successfully!")
+    os.makedirs("data", exist_ok=True)
 
+    # Store username and hashed password in auth file
+    with open(AUTH_FILE, "a") as f:
+        f.write(f"{username},{hashed_password}\n")
+
+    # Add username to users file
+    with open(USERS_FILE, "a") as f:
+        f.write(f"{username}\n")
+
+    print(f"User {username} registered successfully!")
 def authenticate_user(username, password):
     """Authenticate user by validating username and hashed password."""
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    with open("data/auth.txt", "r") as f:
+    with open(AUTH_FILE, "r") as f:
         for line in f:
             stored_username, stored_hash = line.strip().split(",")
             if stored_username == username and stored_hash == hashed_password:
@@ -26,6 +34,14 @@ def authenticate_user(username, password):
     print("Authentication failed. Invalid username or password.")
     return False
 
+def get_registered_users():
+    """Retrieve the list of registered users."""
+    if not os.path.isfile(USERS_FILE):
+        print("No registered users found.")
+        return []
+    with open(USERS_FILE, "r") as f:
+        users = [line.strip() for line in f]
+    return users
 def generate_user_certificate(username, user_private_key, ca_key, ca_cert):
     """Generate a user certificate signed by the CA."""
     # Create CSR using the user's private key
