@@ -1,4 +1,6 @@
-import rsa
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 class RSAHandler:
     def __init__(self, public_key=None, private_key=None):
@@ -7,8 +9,46 @@ class RSAHandler:
 
     def encrypt(self, data):
         """Encrypt data with RSA public key."""
-        return rsa.encrypt(data, self.public_key)
+        ciphertext = self.public_key.encrypt(
+            data.encode(),  # Convert to bytes
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        return ciphertext
 
     def decrypt(self, data):
         """Decrypt data with RSA private key."""
-        return rsa.decrypt(data, self.private_key)
+        plaintext = self.private_key.decrypt(
+            data,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        return plaintext.decode()  # Decode back to string
+
+    def sign(self, message):
+        """Sign a message using the private key."""
+        signature = self.private_key.sign(
+            message.encode(),  # Convert to bytes
+            padding.PKCS1v15(),
+            hashes.SHA256()
+        )
+        return signature
+
+    def verify(self, message, signature):
+        """Verify the signature of a message using the public key."""
+        try:
+            self.public_key.verify(
+                signature,
+                message.encode(),  # Convert to bytes
+                padding.PKCS1v15(),
+                hashes.SHA256()
+            )
+            return True
+        except Exception as e:
+            return False

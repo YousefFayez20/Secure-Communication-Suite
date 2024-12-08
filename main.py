@@ -1,58 +1,78 @@
-from utils.auth import register_user, authenticate_user
-from utils.keys import generate_and_store_rsa_keys, load_rsa_keys, generate_aes_key, generate_iv
+from utils.auth import register_user, authenticate_user, generate_user_certificate
+from utils.keys import generate_rsa_keys, generate_aes_key, generate_iv
 from crypto.aes import AESHandler
 from crypto.hash import compute_sha256, verify_hash
+from crypto.ca import create_ca
 from crypto.signing import sign_message, verify_signature
+from crypto.rsaEnDe import RSAHandler
+
 
 def main():
     print("=== Secure Communication Suite ===")
-
-    # Step 1: User Registration or Login
-    choice = input("1. Register\n2. Login\nChoose an option: ")
-    username = input("Enter username: ")
-    password = input("Enter password: ")
+    print("1. Register User")
+    print("2. Login and Use Suite")
+    choice = input("Choose an option: ").strip()
 
     if choice == "1":
+        # Registration
+        username = input("Enter a username: ").strip()
+        password = input("Enter a password: ").strip()
+
+        # Register user and generate RSA keys
         register_user(username, password)
-        generate_and_store_rsa_keys(username)
+        public_key, private_key = generate_rsa_keys()
+
+        # Generate certificate
+        ca_key, ca_cert = create_ca()
+        generate_user_certificate(username, private_key, ca_key, ca_cert)
+        print(f"User {username} registered successfully!")
+
     elif choice == "2":
+        # Login
+        username = input("Enter your username: ").strip()
+        password = input("Enter your password: ").strip()
+
         if not authenticate_user(username, password):
+            print("Login failed.")
             return
-        generate_and_store_rsa_keys(username)
 
-    # Load user keys
-    public_key, private_key = load_rsa_keys(username)
+        print(f"Welcome back, {username}!")
 
-    # Step 2: Message Preparation
-    message = input("Enter the message to encrypt: ")
-    print(f"\nOriginal Message: {message}")
+        # Generate or retrieve RSA keys
+        public_key, private_key = generate_rsa_keys()
 
-    # Step 3: Hash the message
-    message_hash = compute_sha256(message)
-    print(f"Message Hash (SHA-256): {message_hash}")
+        # Symmetric Encryption with AES
+        message = input("Enter a message to secure: ").strip()
+        aes_key = generate_aes_key()
+        iv = generate_iv()
+        aes_handler = AESHandler(aes_key, iv)
+        encrypted_message = aes_handler.encrypt(message)
+        print(f"\nEncrypted Message (AES): {encrypted_message.hex()}")
 
-    # Step 4: Sign the message
-    signature = sign_message(message, private_key)
-    print(f"Message Signature: {signature.hex()}")
+        # Hashing for Integrity
+        message_hash = compute_sha256(message)
+        print(f"Message Hash (SHA-256): {message_hash}")
 
-    # Step 5: Verify the signature
-    is_valid = verify_signature(message, signature, public_key)
-    print("Signature Verification:", "Passed" if is_valid else "Failed")
+        # Sign the Message with RSA
+        rsa_handler = RSAHandler(public_key, private_key)
+        signature = rsa_handler.sign(message)
+        print(f"Message Signature: {signature.hex()}")
 
-    # Step 6: Encrypt the message using AES
-    aes_key = generate_aes_key()
-    iv = generate_iv()
-    aes_handler = AESHandler(aes_key, iv)
-    encrypted_message = aes_handler.encrypt(message)
-    print(f"\nEncrypted Message: {encrypted_message.hex()}")
+        # Verify Signature
+        is_signature_valid = rsa_handler.verify(message, signature)
+        print(f"Signature Verification: {'Passed' if is_signature_valid else 'Failed'}")
 
-    # Step 7: Decrypt the message
-    decrypted_message = aes_handler.decrypt(encrypted_message)
-    print(f"Decrypted Message: {decrypted_message}")
+        # Decrypt AES Message
+        decrypted_message = aes_handler.decrypt(encrypted_message)
+        print(f"Decrypted Message: {decrypted_message}")
 
-    # Verify message integrity
-    is_message_intact = verify_hash(decrypted_message, message_hash)
-    print("Message Integrity:", "Intact" if is_message_intact else "Compromised")
+        # Verify Integrity
+        is_message_intact = verify_hash(decrypted_message, message_hash)
+        print(f"Message Integrity: {'Intact' if is_message_intact else 'Compromised'}")
+
+    else:
+        print("Invalid option. Exiting.")
+
 
 if __name__ == "__main__":
     main()

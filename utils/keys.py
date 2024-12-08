@@ -1,7 +1,8 @@
 from Crypto.Random import get_random_bytes
 from secrets import token_bytes
-import rsa
 import os
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
 def generate_aes_key(key_size=16):
     """Generate a random AES key."""
     return get_random_bytes(key_size)
@@ -11,10 +12,10 @@ def generate_iv(block_size=16):
     return token_bytes(block_size)
 
 def generate_rsa_keys():
-    """Generate RSA public and private keys."""
-    publickey, privatekey = rsa.newkeys(1024)  # 1024-bit RSA keys
-    return publickey, privatekey
-
+    """Generate RSA public and private keys using cryptography."""
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_key = private_key.public_key()
+    return public_key, private_key
 def generate_and_store_rsa_keys(username):
     """Generate RSA keys and store them in the user's directory."""
     private_key_file = f"data/keys/{username}_private.pem"
