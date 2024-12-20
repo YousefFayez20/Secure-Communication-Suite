@@ -53,38 +53,40 @@ def start_server():
     print(f"Connected to client at {addr}")
 
     try:
-        # Receive data from the client
-        data = conn.recv(4096)
-        if not data:
-            print("No data received from the client.")
-            return
+        while True:
+            # Receive data from the client
+            data = conn.recv(4096)
+            if not data:
+                print("No data received from the client.")
+                continue
+                # return
 
-        # Split the data: encrypted AES key, encrypted username, encrypted message, and message hash
-        encrypted_aes_key, encrypted_username, encrypted_message, received_hash = data.split(b"||")
-        print(f"Received encrypted AES key: {encrypted_aes_key}")
+            # Split the data: encrypted AES key, encrypted username, encrypted message, and message hash
+            encrypted_aes_key, encrypted_username, encrypted_message, received_hash = data.split(b"||")
+            print(f"Received encrypted AES key: {encrypted_aes_key}")
 
-        # Decrypt the AES key using RSA private key
-        aes_key = rsa_handler.decrypt(encrypted_aes_key)
-        if aes_key is None:
-            print("Failed to decrypt the AES key.")
-            return
-        print(f"Decrypted AES Key: {aes_key}")
+            # Decrypt the AES key using RSA private key
+            aes_key = rsa_handler.decrypt(encrypted_aes_key)
+            if aes_key is None:
+                print("Failed to decrypt the AES key.")
+                return
+            print(f"Decrypted AES Key: {aes_key}")
 
-        # Decrypt the username
-        username = rsa_handler.decrypt(encrypted_username).decode()  # Decrypt the username
-        print(f"Authenticated User: {username}")
+            # Decrypt the username
+            username = rsa_handler.decrypt(encrypted_username).decode()  # Decrypt the username
+            print(f"Authenticated User: {username}")
 
-        # Now handle message decryption using AES
-        iv = b"RandomIV12345678"  # Predefined IV
-        aes_handler = AESHandler(aes_key, iv)
+            # Now handle message decryption using AES
+            iv = b"RandomIV12345678"  # Predefined IV
+            aes_handler = AESHandler(aes_key, iv)
 
-        decrypted_message = aes_handler.decrypt(encrypted_message)
-        print(f"Decrypted Message: {decrypted_message}")
+            decrypted_message = aes_handler.decrypt(encrypted_message)
+            print(f"Decrypted Message: {decrypted_message}")
 
-        # Verify message integrity using SHA-256
-        computed_hash = compute_sha256(decrypted_message)
-        integrity_check = computed_hash == received_hash.decode()
-        print(f"Message Integrity: {'Intact' if integrity_check else 'Compromised'}")
+            # Verify message integrity using SHA-256
+            computed_hash = compute_sha256(decrypted_message)
+            integrity_check = computed_hash == received_hash.decode()
+            print(f"Message Integrity: {'Intact' if integrity_check else 'Compromised'}")
 
     except Exception as e:
         print(f"Server encountered an error: {e}")

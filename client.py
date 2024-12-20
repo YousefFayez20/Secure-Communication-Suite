@@ -19,6 +19,8 @@ def start_client():
         print("Login failed.")
         return
 
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect(("localhost", 12345))
     # Load server's public key
     with open("server_public.pem", "rb") as f:
         public_key = serialization.load_pem_public_key(f.read())
@@ -26,50 +28,50 @@ def start_client():
     # Generate AES key
     aes_key = generate_aes_key()
 
-    # Prompt the user for the message they want to send
-    message = input("Enter the message you want to send: ").strip()
+    while True:
+        # Prompt the user for the message they want to send
+        message = input("Enter the message you want to send: ").strip()
 
-    # Predefined IV for AES encryption (you could also generate it randomly if needed)
-    iv = b"RandomIV12345678"
-    aes_handler = AESHandler(aes_key, iv)
+        # Predefined IV for AES encryption (you could also generate it randomly if needed)
+        iv = b"RandomIV12345678"
+        aes_handler = AESHandler(aes_key, iv)
 
-    # Encrypt the message using AES
-    encrypted_message = aes_handler.encrypt(message)
-    print(f"Encrypted Message (AES): {encrypted_message.hex()}")
+        # Encrypt the message using AES
+        encrypted_message = aes_handler.encrypt(message)
+        print(f"Encrypted Message (AES): {encrypted_message.hex()}")
 
-    # Encrypt AES key with the server's RSA public key
-    encrypted_aes_key = public_key.encrypt(
-        aes_key,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
+        # Encrypt AES key with the server's RSA public key
+        encrypted_aes_key = public_key.encrypt(
+            aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
         )
-    )
 
-    # Encrypt the username for confidentiality (optional)
-    encrypted_username = public_key.encrypt(
-        username.encode(),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
+        # Encrypt the username for confidentiality (optional)
+        encrypted_username = public_key.encrypt(
+            username.encode(),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
         )
-    )
 
-    # Compute hash of the message for integrity verification
-    message_hash = compute_sha256(message)
+        # Compute hash of the message for integrity verification
+        message_hash = compute_sha256(message)
 
-    # Send the data to the server
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(("localhost", 12345))
+        # Send the data to the server
 
-    # Send encrypted AES key, encrypted username, encrypted message, and the message hash
-    client_socket.send(
-        encrypted_aes_key + b"||" + encrypted_username + b"||" + encrypted_message + b"||" + message_hash.encode())
 
-    print(f"Message sent to the server: {message}")
-    client_socket.close()
+        # Send encrypted AES key, encrypted username, encrypted message, and the message hash
+        client_socket.send(
+            encrypted_aes_key + b"||" + encrypted_username + b"||" + encrypted_message + b"||" + message_hash.encode())
+
+        print(f"Message sent to the server: {message}")
+    # client_socket.close()
 
 
 # Client-side entry point
