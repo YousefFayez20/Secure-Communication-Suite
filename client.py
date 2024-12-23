@@ -18,7 +18,15 @@ def start_client():
     if not authenticate_user(username, password):
         print("Login failed.")
         return
+        # Validate the server's certificate
+        ca_cert_path = "crypto/certificates/ca_cert.pem"
+        server_cert_path = "crypto/certificates/server_cert.pem"
 
+        if not validate_certificate(server_cert_path, ca_cert_path):
+            print("Server certificate validation failed. Exiting...")
+            return
+
+        print("Server certificate validated successfully.")
     # Load server's public key
     with open("server_public.pem", "rb") as f:
         public_key = serialization.load_pem_public_key(f.read())

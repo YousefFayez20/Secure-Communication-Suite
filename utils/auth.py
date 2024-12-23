@@ -42,8 +42,11 @@ def get_registered_users():
     with open(USERS_FILE, "r") as f:
         users = [line.strip() for line in f]
     return users
-def generate_user_certificate(username, user_private_key, ca_key, ca_cert):
+def generate_user_certificate(username, user_private_key, ca_key, ca_cert, cert_filename=None):
     """Generate a user certificate signed by the CA."""
+    if not cert_filename:
+        cert_filename = f"crypto/certificates/{username}.crt"
+
     # Create CSR using the user's private key
     csr = (
         CertificateSigningRequestBuilder()
@@ -67,7 +70,6 @@ def generate_user_certificate(username, user_private_key, ca_key, ca_cert):
     )
 
     # Save user certificate
-    cert_path = f"crypto/certificates/{username}.crt"
-    with open(cert_path, "wb") as cert_file:
+    with open(cert_filename, "wb") as cert_file:
         cert_file.write(user_cert.public_bytes(Encoding.PEM))
-    print(f"Certificate for {username} saved at {cert_path}.")
+    print(f"Certificate for {username} saved at {cert_filename}.")

@@ -1,7 +1,11 @@
+import os
 import socket
 
+from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from crypto.ca import validate_certificate
+from utils.auth import generate_user_certificate
 from utils.keys import generate_rsa_keys
 from crypto.aes import AESHandler
 from crypto.hash import compute_sha256
@@ -9,33 +13,78 @@ from crypto.rsaEnDe import RSAHandler
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import padding
 
+from crypto.ca import create_ca, save_certificate
+
 def create_server_keys():
-    """Generate server's RSA key pair and save the public key."""
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    """Generate server's RSA key pair, save the public key, and create a server certificate."""
+    private_key_file = "server_private.pem"
+    public_key_file = "server_public.pem"
+    server_cert_path = "crypto/certificates/server_cert.pem"
+    ca_cert_path = "crypto/certificates/ca_cert.pem"
+    ca_key_path = "crypto/certificates/ca_key.pem"
 
-    # Save the private key (optional, for server-side use only)
-    with open("server_private.pem", "wb") as priv_file:
-        priv_file.write(
-            private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-        )
+    # Generate server RSA keys if not already created
+    if not os.path.exists(private_key_file) or not os.path.exists(public_key_file):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        public_key = private_key.public_key()
 
-    # Extract and save the public key
-    public_key = private_key.public_key()
-    with open("server_public.pem", "wb") as pub_file:
-        pub_file.write(
-            public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
+        with open(private_key_file, "wb") as priv_file:
+            priv_file.write(
+                private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
             )
-        )
-    print("Server RSA keys generated and saved to server_public.pem and server_private.pem.")
+
+        with open(public_key_file, "wb") as pub_file:
+            pub_file.write(
+                public_key.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+        print("Server RSA keys generated and saved.")
+
+    # Check if the CA exists; create if not
+    if not os.path.exists(ca_cert_path) or not os.path.exists(ca_key_path):
+        ca_key, ca_cert = create_ca()
+        save_certificate(ca_cert, ca_cert_path)
+        with open(ca_key_path, "wb") as ca_key_file:
+            ca_key_file.write(
+                ca_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
+        print("CA created and saved.")
+
+    # Load CA certificate and key
+    with open(ca_cert_path, "rb") as f:
+        ca_cert = x509.load_pem_x509_certificate(f.read())
+
+    with open(ca_key_path, "rb") as f:
+        ca_key = serialization.load_pem_private_key(f.read(), password=None)
+
+    # Generate server certificate if not already created
+    if not os.path.exists(server_cert_path):
+        with open(private_key_file, "rb") as priv_file:
+            server_private_key = serialization.load_pem_private_key(priv_file.read(), password=None)
+
+        generate_user_certificate("Server", server_private_key, ca_key, ca_cert, cert_filename=server_cert_path)
+        print(f"Server certificate generated and saved to {server_cert_path}.")
 
 
 def start_server():
+    ca_cert_path = "crypto/certificates/ca_cert.pem"
+    server_cert_path = "crypto/certificates/server_cert.pem"
+
+    if not validate_certificate(server_cert_path, ca_cert_path):
+        print("Server certificate validation failed. Exiting...")
+        return
+
+    print("Server certificate validated successfully.")
     # Load server's private key for RSA decryption
     with open("server_private.pem", "rb") as f:
         private_key = serialization.load_pem_private_key(f.read(), password=None)
@@ -78,8 +127,12 @@ def start_server():
         iv = b"RandomIV12345678"  # Predefined IV
         aes_handler = AESHandler(aes_key, iv)
 
-        decrypted_message = aes_handler.decrypt(encrypted_message)
-        print(f"Decrypted Message: {decrypted_message}")
+        try:
+            # Decrypt the message using AES
+            decrypted_message = aes_handler.decrypt(encrypted_message)
+            print(f"Decrypted Message: {decrypted_message}")
+        except ValueError as e:
+            print(f"Error during decryption: {e}")
 
         # Verify message integrity using SHA-256
         computed_hash = compute_sha256(decrypted_message)
