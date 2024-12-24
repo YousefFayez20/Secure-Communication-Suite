@@ -109,7 +109,16 @@ def start_server():
             return
 
         # Split the data: encrypted AES key, encrypted username, encrypted message, and message hash
-        encrypted_aes_key, encrypted_username, encrypted_message, received_hash = data.split(b"||")
+        # Debugging: Print received data lengths
+        print(f"Received data length: {len(data)}")
+
+        # Properly handle splitting using a more robust protocol (e.g., length-prefixed data)
+        try:
+            encrypted_aes_key, encrypted_username, encrypted_message, received_hash = data.split(b"||")
+        except ValueError as e:
+            print(f"Data splitting error: {e}")
+            return
+
         print(f"Received encrypted AES key: {encrypted_aes_key}")
 
         # Decrypt the AES key using RSA private key
