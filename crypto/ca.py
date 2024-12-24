@@ -11,7 +11,7 @@ def create_ca(ca_name="My CA"):
     """Create and return a self-signed CA certificate and private key."""
     ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, u"US"),
+        x509.NameAttribute(NameOID.COUNTRY_NAME, u"EG"),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, ca_name),
         x509.NameAttribute(NameOID.COMMON_NAME, ca_name),
     ])
