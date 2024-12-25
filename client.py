@@ -11,13 +11,17 @@ from cryptography.hazmat.primitives import hashes
 
 
 def start_client():
-    # Authenticate user
-    username = input("Enter your username: ").strip()
-    password = input("Enter your password: ").strip()
 
-    if not authenticate_user(username, password):
-        print("Login failed.")
-        return
+    while True:
+        # Authenticate user
+        username = input("Enter your username: ").strip()
+        password = input("Enter your password: ").strip()
+
+        if not authenticate_user(username, password):
+            print("Login failed.")
+            continue
+        else:
+            break
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(("localhost", 12345))
