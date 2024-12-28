@@ -1,5 +1,7 @@
 import hashlib
 
+
+#256-bit, uncomputationally feasible.
 def compute_sha256(data):
     """Generate SHA-256 hash of the given data."""
     sha256_hash = hashlib.sha256()
@@ -11,6 +13,9 @@ def compute_md5(data):
     md5_hash = hashlib.md5()
     md5_hash.update(data.encode())  # Convert data to bytes before hashing
     return md5_hash.hexdigest()
+
+#128-bit, It's possible to create two different inputs that produce the same hash.Finding an input that produces a specific hash is computationally feasible.
+
 
 def verify_hash(data, given_hash, algorithm="sha256"):
     """Verify if the hash of the data matches the given hash."""

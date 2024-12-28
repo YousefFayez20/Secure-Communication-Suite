@@ -46,7 +46,7 @@ def start_client():
         # Prompt the user for the message they want to send
         message = input("Enter the message you want to send: ").strip()
 
-        # Predefined IV for AES encryption (you could also generate it randomly if needed)
+        # Predefined IV for AES encryption
         iv = b"RandomIV12345678"
         aes_handler = AESHandler(aes_key, iv)
 
@@ -64,7 +64,7 @@ def start_client():
             )
         )
 
-        # Encrypt the username for confidentiality (optional)
+        # Encrypt the username for confidentiality
         encrypted_username = public_key.encrypt(
             username.encode(),
             padding.OAEP(

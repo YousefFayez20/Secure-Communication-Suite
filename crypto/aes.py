@@ -1,6 +1,8 @@
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
+
+#and used over DES because AES key size is 128 bits, which makes it stronger against brute force attacks unlike DES which have a key size of 56 bit 
 class AESHandler:
     def __init__(self, key, iv):
         self.key = key
@@ -8,7 +10,7 @@ class AESHandler:
         self.cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
 
     def encrypt(self, plain_text):
-        """Encrypts plaintext using AES in CBC mode."""
+        """Encrypts plaintext using AES in CBC mode .a 16-byte (128-bit) key is used  """
         plain_text_padded = pad(plain_text.encode(), AES.block_size)
         cipher_text = self.cipher.encrypt(plain_text_padded)
         return cipher_text
